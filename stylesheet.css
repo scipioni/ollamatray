@@ -1,0 +1,14 @@
+/* Add your custom extension styling here */
+
+.ollama-model-item {
+    font-size: 0.9em;
+}
+
+.ollama-model-running {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.ollama-model-stopped {
+    color: #F44336;
+}

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.ollamatray" path="/org/gnome/shell/extensions/ollamatray/">
+    <key name="gpu-ram" type="i">
+      <default>8192</default>
+      <summary>GPU RAM in MB</summary>
+      <description>Amount of GPU RAM in megabytes, used to calculate utilization percentage</description>
+    </key>
+    <key name="polling-interval" type="i">
+      <default>30</default>
+      <summary>Polling interval in seconds</summary>
+      <description>How often to poll Ollama for status updates (in seconds)</description>
+    </key>
+  </schema>
+</schemalist>

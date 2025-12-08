@@ -1,0 +1,15 @@
+{
+  "name": "ollama-tray",
+  "description": "Show ollama status and models with RAM usage",
+  "uuid": "ollamatray@scipio.it",
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48",
+    "49"
+  ],
+  "url": "https://github.com/scipio/ollamatray",
+  "settings-schema": "org.gnome.shell.extensions.ollamatray",
+  "icon": "icons/ollama-symbolic.svg"
+}
