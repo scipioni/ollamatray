@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <schema id="org.gnome.shell.extensions.ollamatray" path="/org/gnome/shell/extensions/ollamatray/">
+    <key name="ollama-url" type="s">
+      <default>'http://localhost:11434'</default>
+      <summary>Ollama API URL</summary>
+      <description>The URL where Ollama API is running</description>
+    </key>
     <key name="gpu-ram" type="i">
       <default>8192</default>
       <summary>GPU RAM in MB</summary>

@@ -181,3 +181,5 @@ To uninstall the extension:
    rm -rf ~/.local/share/gnome-shell/extensions/ollamatray@scipio.it/
    ```
 3. Optionally restart GNOME Shell to fully clear it from memory
+
+

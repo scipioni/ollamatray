@@ -15,6 +15,7 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
+
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
@@ -25,7 +26,6 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-const OLLAMA_URL = 'http://localhost:11434';
 const CURL_TIMEOUT = 10;
 const STATUS_INDICATORS = {
     RUNNING: '●',
@@ -35,21 +35,42 @@ const MB_PER_GB = 1024;
 
 // Helper class for RAM/Size parsing
 class MemoryParser {
-    static parseToMB(memoryString) {
-        if (!memoryString) return 0;
-        
-        const match = memoryString.match(/(\d+\.?\d*)\s*(GB|MB)/);
-        if (!match) return 0;
-        
-        const value = parseFloat(match[1]);
-        const unit = match[2];
-        
-        return unit === 'GB' ? value * MB_PER_GB : value;
+    /**
+     * Convert bytes to megabytes
+     * @param {number} bytes - Size in bytes
+     * @returns {number} Size in MB
+     */
+    static bytesToMB(bytes) {
+        if (!bytes || typeof bytes !== 'number') return 0;
+        return bytes / (1024 * 1024);
     }
 
+    /**
+     * Format bytes to human-readable string
+     * @param {number} bytes - Size in bytes
+     * @returns {string} Formatted size string (e.g., "1.5 GB" or "500 MB")
+     */
+    static formatBytes(bytes) {
+        if (!bytes || typeof bytes !== 'number') return '0 MB';
+        
+        const mb = bytes / (1024 * 1024);
+        const gb = mb / 1024;
+        
+        if (gb >= 1) {
+            return `${gb.toFixed(2)} GB`;
+        }
+        return `${Math.round(mb)} MB`;
+    }
+
+    /**
+     * Calculate total memory usage from models
+     * @param {Array} models - Array of model objects
+     * @param {string} memoryField - Field name to sum (e.g., 'size', 'size_vram')
+     * @returns {number} Total memory in MB
+     */
     static calculateTotalMemory(models, memoryField) {
         return models.reduce((total, model) => {
-            return total + this.parseToMB(model[memoryField]);
+            return total + this.bytesToMB(model[memoryField]);
         }, 0);
     }
 }
@@ -83,6 +104,9 @@ const OllamaTrayIndicator = GObject.registerClass({
         }
 
         this._settings = settings;
+        
+        // Get Ollama URL from settings
+        this._ollamaUrl = this._settings.get_string('ollama-url');
 
         // Create the icon for the tray
         const extension = Extension.lookupByURL(import.meta.url);
@@ -123,6 +147,7 @@ const OllamaTrayIndicator = GObject.registerClass({
         this._settingsChangedIds = [];
 
         const settingsHandlers = [
+            ['changed::ollama-url', this._onOllamaUrlChanged.bind(this)],
             ['changed::gpu-ram', this._onGpuRamChanged.bind(this)],
             ['changed::show-tray-text', this._onTrayTextChanged.bind(this)],
             ['changed::show-gpu-ram', this._onTrayTextChanged.bind(this)],
@@ -158,9 +183,10 @@ const OllamaTrayIndicator = GObject.registerClass({
 
     _createRunningModelItems() {
         return this._runningModels.map(model => {
-            const vramInfo = model.vram || 'VRAM info not available';
+            const sizeStr = MemoryParser.formatBytes(model.size);
+            const vramStr = MemoryParser.formatBytes(model.size_vram);
             return new PopupMenu.PopupMenuItem(
-                `${model.name} (${model.size}, ${vramInfo})`
+                `${model.name} (Size: ${sizeStr}, VRAM: ${vramStr})`
             );
         });
     }
@@ -179,8 +205,9 @@ const OllamaTrayIndicator = GObject.registerClass({
                 STATUS_INDICATORS.RUNNING :
                 STATUS_INDICATORS.STOPPED;
             
+            const sizeStr = MemoryParser.formatBytes(model.size);
             const modelItem = new PopupMenu.PopupMenuItem(
-                `${statusIndicator} ${model.name} (${model.size})`
+                `${statusIndicator} ${model.name} (${sizeStr})`
             );
 
             const styleClass = isRunning ?
@@ -195,7 +222,7 @@ const OllamaTrayIndicator = GObject.registerClass({
     _getGpuUtilizationText() {
         const totalVramUsed = MemoryParser.calculateTotalMemory(
             this._runningModels,
-            'vram'
+            'size_vram'
         );
 
         if (totalVramUsed === 0) {
@@ -241,22 +268,38 @@ const OllamaTrayIndicator = GObject.registerClass({
         );
         statusItem.add_style_class_name('popup-subtitle-menu-item');
         this.menu.addMenuItem(statusItem);
+
+        // Settings submenu
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        const settingsMenu = new PopupMenu.PopupSubMenuMenuItem('Settings');
+        
+        // Ollama URL setting
+        const urlItem = new PopupMenu.PopupMenuItem(`URL: ${this._ollamaUrl}`);
+        urlItem.connect('activate', () => this._showUrlDialog());
+        settingsMenu.menu.addMenuItem(urlItem);
+        
+        // GPU RAM setting
+        const gpuRamItem = new PopupMenu.PopupMenuItem(`GPU RAM: ${this._gpuRam} MB`);
+        gpuRamItem.connect('activate', () => this._showGpuRamDialog());
+        settingsMenu.menu.addMenuItem(gpuRamItem);
+        
+        this.menu.addMenuItem(settingsMenu);
     }
 
     async _fetchStatus() {
         try {
             // Fetch running models
-            const runningResponse = await this._fetchJson(`${OLLAMA_URL}/api/ps`);
+            const runningResponse = await this._fetchJson(`${this._ollamaUrl}/api/ps`);
             this._runningModels = runningResponse?.models || [];
 
             // Fetch all local models
-            const localResponse = await this._fetchJson(`${OLLAMA_URL}/api/tags`);
+            const localResponse = await this._fetchJson(`${this._ollamaUrl}/api/tags`);
             this._allModels = localResponse?.models || [];
 
             // Update RAM usage
             const totalRam = MemoryParser.calculateTotalMemory(
                 this._runningModels,
-                'vram'
+                'size_vram'
             );
             this._ramUsage = totalRam > 0 ? `${Math.round(totalRam)} MB` : '0 MB';
 
@@ -275,7 +318,7 @@ const OllamaTrayIndicator = GObject.registerClass({
     _calculateMemoryUsage() {
         const totalVramUsed = MemoryParser.calculateTotalMemory(
             this._runningModels,
-            'vram'
+            'size_vram'
         );
         const totalRamUsed = MemoryParser.calculateTotalMemory(
             this._runningModels,
@@ -340,15 +383,13 @@ const OllamaTrayIndicator = GObject.registerClass({
 
         const showText = this._settings.get_boolean('show-tray-text') || true;
 
-        // Update tooltip (GNOME 49 uses reactive property)
+        // Update tooltip - set on the button itself, not the icon
         const tooltipText =
             `Ollama - ${this._runningModels.length} running, ${this._allModels.length} total\n` +
             `GPU: ${totalVramUsed.toFixed(0)} / ${this._gpuRam} MB (${gpuUtilization}%)`;
         
-        // Set tooltip using St.Label's tooltip_text property
-        if (this._icon) {
-            this._icon.set_tooltip_text(tooltipText);
-        }
+        // Set tooltip_text property on the button
+        this.set_tooltip_text?.(tooltipText);
 
         // Update text label
         if (showText) {
@@ -430,11 +471,68 @@ const OllamaTrayIndicator = GObject.registerClass({
     }
 
     /**
+     * Show dialog to edit Ollama URL
+     * @private
+     */
+    _showUrlDialog() {
+        const command = `zenity --entry --title="Ollama URL" --text="Enter Ollama API URL:" --entry-text="${this._ollamaUrl}"`;
+        
+        try {
+            const [res, out, err, status] = GLib.spawn_command_line_sync(command);
+            
+            if (status === 0) {
+                const decoder = new TextDecoder('utf-8');
+                const newUrl = decoder.decode(out).trim();
+                
+                if (newUrl && newUrl !== this._ollamaUrl) {
+                    this._settings.set_string('ollama-url', newUrl);
+                }
+            }
+        } catch (e) {
+            console.error('Error showing URL dialog:', e);
+        }
+    }
+
+    /**
+     * Show dialog to edit GPU RAM
+     * @private
+     */
+    _showGpuRamDialog() {
+        const command = `zenity --entry --title="GPU RAM" --text="Enter GPU RAM size in MB:" --entry-text="${this._gpuRam}"`;
+        
+        try {
+            const [res, out, err, status] = GLib.spawn_command_line_sync(command);
+            
+            if (status === 0) {
+                const decoder = new TextDecoder('utf-8');
+                const newRam = parseInt(decoder.decode(out).trim(), 10);
+                
+                if (!isNaN(newRam) && newRam > 0) {
+                    this._settings.set_int('gpu-ram', newRam);
+                }
+            }
+        } catch (e) {
+            console.error('Error showing GPU RAM dialog:', e);
+        }
+    }
+
+    /**
+     * Handle Ollama URL setting change
+     * @private
+     */
+    _onOllamaUrlChanged() {
+        this._ollamaUrl = this._settings.get_string('ollama-url');
+        this._createMenu();
+        this._fetchStatus();
+    }
+
+    /**
      * Handle GPU RAM setting change
      * @private
      */
     _onGpuRamChanged() {
         this._gpuRam = this._settings.get_int('gpu-ram');
+        this._createMenu();
         this._updateDisplay();
     }
 
