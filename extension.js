@@ -277,21 +277,11 @@ const OllamaTrayIndicator = GObject.registerClass({
         statusItem.add_style_class_name('popup-subtitle-menu-item');
         this.menu.addMenuItem(statusItem);
 
-        // Settings submenu
+        // Preferences menu item
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        const settingsMenu = new PopupMenu.PopupSubMenuMenuItem('Settings');
-        
-        // Ollama URL setting
-        const urlItem = new PopupMenu.PopupMenuItem(`URL: ${this._ollamaUrl}`);
-        urlItem.connect('activate', () => this._showUrlDialog());
-        settingsMenu.menu.addMenuItem(urlItem);
-        
-        // GPU RAM setting
-        const gpuRamItem = new PopupMenu.PopupMenuItem(`GPU RAM: ${this._gpuRam} MB`);
-        gpuRamItem.connect('activate', () => this._showGpuRamDialog());
-        settingsMenu.menu.addMenuItem(gpuRamItem);
-        
-        this.menu.addMenuItem(settingsMenu);
+        const preferencesItem = new PopupMenu.PopupMenuItem('Preferences');
+        preferencesItem.connect('activate', () => this._openPreferences());
+        this.menu.addMenuItem(preferencesItem);
     }
 
     async _fetchStatus() {
@@ -519,48 +509,15 @@ const OllamaTrayIndicator = GObject.registerClass({
     }
 
     /**
-     * Show dialog to edit Ollama URL
+     * Open extension preferences window
      * @private
      */
-    _showUrlDialog() {
-        const command = `zenity --entry --title="Ollama URL" --text="Enter Ollama API URL:" --entry-text="${this._ollamaUrl}"`;
-        
+    _openPreferences() {
         try {
-            const [res, out, err, status] = GLib.spawn_command_line_sync(command);
-            
-            if (status === 0) {
-                const decoder = new TextDecoder('utf-8');
-                const newUrl = decoder.decode(out).trim();
-                
-                if (newUrl && newUrl !== this._ollamaUrl) {
-                    this._settings.set_string('ollama-url', newUrl);
-                }
-            }
+            const extension = Extension.lookupByURL(import.meta.url);
+            extension.openPreferences();
         } catch (e) {
-            console.error('Error showing URL dialog:', e);
-        }
-    }
-
-    /**
-     * Show dialog to edit GPU RAM
-     * @private
-     */
-    _showGpuRamDialog() {
-        const command = `zenity --entry --title="GPU RAM" --text="Enter GPU RAM size in MB:" --entry-text="${this._gpuRam}"`;
-        
-        try {
-            const [res, out, err, status] = GLib.spawn_command_line_sync(command);
-            
-            if (status === 0) {
-                const decoder = new TextDecoder('utf-8');
-                const newRam = parseInt(decoder.decode(out).trim(), 10);
-                
-                if (!isNaN(newRam) && newRam > 0) {
-                    this._settings.set_int('gpu-ram', newRam);
-                }
-            }
-        } catch (e) {
-            console.error('Error showing GPU RAM dialog:', e);
+            console.error('Error opening preferences:', e);
         }
     }
 
