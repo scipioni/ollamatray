@@ -132,6 +132,14 @@ const OllamaTrayIndicator = GObject.registerClass({
         this._allModels = [];
         this._ramUsage = '0 MB';
         this._gpuRam = this._settings.get_int('gpu-ram');
+        
+        // Create GPU percentage label
+        this._gpuLabel = new St.Label({
+            text: '0%',
+            y_align: Clutter.ActorAlign.CENTER,
+            style_class: 'system-status-label'
+        });
+        this.add_child(this._gpuLabel);
 
         // Setup settings listeners
         this._setupSettingsListeners();
@@ -326,8 +334,13 @@ const OllamaTrayIndicator = GObject.registerClass({
         );
         const gpuUtilization = this._gpuRam > 0 ?
             Math.round((totalVramUsed / this._gpuRam) * 100) : 0;
+        
+        // Determine if GPU is being used (check if any model has VRAM allocated)
+        const isUsingGpu = this._runningModels.some(model =>
+            model.size_vram && model.size_vram > 0
+        );
 
-        return { totalVramUsed, totalRamUsed, gpuUtilization };
+        return { totalVramUsed, totalRamUsed, gpuUtilization, isUsingGpu };
     }
 
     _buildDisplayText(totalVramUsed, totalRamUsed) {
@@ -374,18 +387,53 @@ const OllamaTrayIndicator = GObject.registerClass({
     }
 
     /**
-     * Update the display (tooltip and text label)
+     * Update icon color based on usage
+     * @private
+     */
+    _updateIconColor(isUsingGpu, hasRunningModels) {
+        if (!this._icon) return;
+        
+        // Remove any existing color styles
+        this._icon.remove_style_class_name('ollama-gpu-active');
+        this._icon.remove_style_class_name('ollama-cpu-active');
+        this._icon.remove_style_class_name('ollama-inactive');
+        
+        if (!hasRunningModels) {
+            // Gray when no models running
+            this._icon.add_style_class_name('ollama-inactive');
+        } else if (isUsingGpu) {
+            // Green when using GPU
+            this._icon.add_style_class_name('ollama-gpu-active');
+        } else {
+            // Red when using CPU
+            this._icon.add_style_class_name('ollama-cpu-active');
+        }
+    }
+
+    /**
+     * Update the display (tooltip, labels, and icon color)
      * @private
      */
     _updateDisplay() {
-        const { totalVramUsed, totalRamUsed, gpuUtilization } =
+        const { totalVramUsed, totalRamUsed, gpuUtilization, isUsingGpu } =
             this._calculateMemoryUsage();
 
+        const hasRunningModels = this._runningModels.length > 0;
         const showText = this._settings.get_boolean('show-tray-text') || true;
 
+        // Update GPU percentage label
+        if (this._gpuLabel) {
+            this._gpuLabel.set_text(`${gpuUtilization}%`);
+        }
+
+        // Update icon color
+        this._updateIconColor(isUsingGpu, hasRunningModels);
+
         // Update tooltip - set on the button itself, not the icon
+        const usageType = !hasRunningModels ? 'Inactive' : (isUsingGpu ? 'GPU' : 'CPU');
         const tooltipText =
             `Ollama - ${this._runningModels.length} running, ${this._allModels.length} total\n` +
+            `Mode: ${usageType}\n` +
             `GPU: ${totalVramUsed.toFixed(0)} / ${this._gpuRam} MB (${gpuUtilization}%)`;
         
         // Set tooltip_text property on the button

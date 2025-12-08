@@ -12,3 +12,16 @@
 .ollama-model-stopped {
     color: #F44336;
 }
+
+/* Icon color states */
+.ollama-gpu-active {
+    color: #4CAF50 !important; /* Green when using GPU */
+}
+
+.ollama-cpu-active {
+    color: #F44336 !important; /* Red when using CPU */
+}
+
+.ollama-inactive {
+    color: #9E9E9E !important; /* Gray when inactive */
+}
