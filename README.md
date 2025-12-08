@@ -6,11 +6,15 @@ A GNOME Shell extension that provides a tray indicator for Ollama running models
 
 - Tray indicator showing running Ollama models with custom Ollama icon
 - RAM/VRAM usage display for running models
+- Configurable GPU RAM parameter for utilization tracking
+- Configurable polling interval
+- Configurable tray text visualization (GPU and CPU RAM)
 - Detailed popup menu with:
   - Running models section with VRAM usage
   - All local models with status indicators (● for running, ○ for stopped)
   - Refresh button to manually update status
-- Automatic polling every 30 seconds
+  - GPU utilization information
+- Automatic polling with configurable interval (default 30 seconds)
 
 ## Prerequisites
 
@@ -118,6 +122,55 @@ To reload the extension during development:
 2. Make your changes
 3. Enable the extension again
 4. If needed, restart GNOME Shell (Alt+F2, then 'r')
+
+## Configuration
+
+### GPU RAM Setting
+
+The extension includes a configurable GPU RAM parameter that allows you to specify your GPU's memory capacity. This enables the extension to calculate and display GPU utilization percentage.
+
+To change the GPU RAM setting:
+1. Install and use the `gnome-extensions` command line tool or a configuration editor
+2. Set the "gpu-ram" key to your GPU memory in MB (e.g., 8192 for 8GB, 24576 for 24GB)
+
+Command line example:
+```bash
+# Get current GPU RAM setting
+gsettings get org.gnome.shell.extensions.ollamatray gpu-ram
+
+# Set GPU RAM to 24GB (24576 MB)
+gsettings set org.gnome.shell.extensions.ollamatray gpu-ram 24576
+```
+
+### Polling Interval Setting
+
+You can also configure how often the extension polls Ollama for updates:
+
+```bash
+# Get current polling interval
+gsettings get org.gnome.shell.extensions.ollamatray polling-interval
+
+# Set polling interval to 60 seconds
+gsettings set org.gnome.shell.extensions.ollamatray polling-interval 60
+```
+
+### Tray Text Visualization Settings
+
+The extension allows you to configure what information is shown in the tray text:
+
+```bash
+# Show/hide text in tray (true/false)
+gsettings get org.gnome.shell.extensions.ollamatray show-tray-text
+gsettings set org.gnome.shell.extensions.ollamatray show-tray-text false  # to hide
+
+# Show/hide GPU RAM in tray text (true/false)
+gsettings set org.gnome.shell.extensions.ollamatray show-gpu-ram false  # to hide GPU info
+
+# Show/hide CPU RAM in tray text (true/false)
+gsettings set org.gnome.shell.extensions.ollamatray show-cpu-ram false  # to hide CPU info
+```
+
+These settings allow you to customize the appearance of the tray indicator to show just the information you want.
 
 ## Uninstalling
 

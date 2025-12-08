@@ -11,5 +11,20 @@
       <summary>Polling interval in seconds</summary>
       <description>How often to poll Ollama for status updates (in seconds)</description>
     </key>
+    <key name="show-tray-text" type="b">
+      <default>true</default>
+      <summary>Show text in tray</summary>
+      <description>Whether to show text information in the tray indicator</description>
+    </key>
+    <key name="show-gpu-ram" type="b">
+      <default>true</default>
+      <summary>Show GPU RAM in tray text</summary>
+      <description>Whether to include GPU RAM usage in the tray text display</description>
+    </key>
+    <key name="show-cpu-ram" type="b">
+      <default>true</default>
+      <summary>Show CPU RAM in tray text</summary>
+      <description>Whether to include CPU RAM usage in the tray text display</description>
+    </key>
   </schema>
 </schemalist>
