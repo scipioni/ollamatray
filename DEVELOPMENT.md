@@ -211,3 +211,259 @@ Some development practices differ under Wayland:
 - Some debugging tools may have different behavior
 - Extension reload requires more steps
 - File monitoring may behave differently
+
+## Making a Release
+
+### 1. Pre-Release Checklist
+
+Before creating a release, ensure:
+
+- [ ] All features are working and tested
+- [ ] No errors in GNOME Shell logs
+- [ ] Code is properly documented
+- [ ] README.md is up to date
+- [ ] metadata.json version is incremented
+- [ ] Screenshots are current and representative
+- [ ] All GSettings schemas are compiled
+- [ ] Extension works on target GNOME Shell versions
+
+### 2. Version Bumping
+
+Update the version in `metadata.json`:
+
+```json
+{
+  "version": 2,  // Increment this for each release
+  "shell-version": ["49"]
+}
+```
+
+**Note:** GNOME Extensions repository requires an integer version number that increments with each submission.
+
+### 3. Creating a Distribution Package
+
+Create a ZIP file containing only the necessary files for distribution:
+
+```bash
+# Navigate to the extension directory
+cd ~/.local/share/gnome-shell/extensions/ollamatray@scipio.it/
+
+# Create the distribution package
+gnome-extensions pack \
+  --extra-source=icons \
+  --extra-source=README.md \
+  --extra-source=DEVELOPMENT.md \
+  --podir=po \
+  --force
+
+# This creates: ollamatray@scipio.it.shell-extension.zip
+```
+
+**Files automatically included:**
+- `extension.js`
+- `metadata.json`
+- `stylesheet.css`
+- `schemas/` directory
+
+**Manually included (via --extra-source):**
+- `icons/` directory
+- `README.md`
+- `DEVELOPMENT.md`
+
+### 4. Manual Package Creation (Alternative)
+
+If gnome-extensions pack doesn't work, create the package manually:
+
+```bash
+#!/bin/bash
+# Create a clean build directory
+mkdir -p build
+cd build
+
+# Copy necessary files
+cp ../extension.js .
+cp ../metadata.json .
+cp ../stylesheet.css .
+cp -r ../schemas .
+cp -r ../icons .
+cp ../README.md .
+
+# Compile schemas
+glib-compile-schemas schemas/
+
+# Create the zip file
+zip -r ../ollamatray@scipio.it.shell-extension.zip .
+
+# Clean up
+cd ..
+rm -rf build
+```
+
+### 5. Testing the Release Package
+
+Before publishing, test the packaged extension:
+
+```bash
+# Install from the package
+gnome-extensions install --force ollamatray@scipio.it.shell-extension.zip
+
+# Enable the extension
+gnome-extensions enable ollamatray@scipio.it
+
+# Log out and log back in
+# Verify everything works as expected
+```
+
+## Publishing to GNOME Extensions Repository
+
+### 1. Create an Account
+
+1. Go to [extensions.gnome.org](https://extensions.gnome.org)
+2. Sign in or create an account
+3. You'll need a GNOME account (can use existing or create one)
+
+### 2. Submit Your Extension
+
+#### First-Time Submission
+
+1. Navigate to [Upload Extension](https://extensions.gnome.org/upload/)
+2. Upload your `.shell-extension.zip` file
+3. Fill in the required information:
+   - **Name**: Ollama Tray
+   - **Description**: System tray indicator for monitoring Ollama models
+   - **URL**: Your project repository (if any)
+   - **Screenshot(s)**: Required - at least one screenshot
+4. Read and accept the review guidelines
+5. Click "Upload Extension"
+
+#### Required Information
+
+**Extension Description** (example):
+```
+A GNOME Shell extension that provides a system tray indicator for monitoring
+Ollama AI models. Features include:
+
+- Real-time monitoring of running models
+- GPU and CPU memory usage tracking
+- Color-coded status indicators (green for GPU, red for CPU, gray when inactive)
+- Configurable Ollama URL and GPU RAM size
+- List view of all available models
+- Automatic status polling
+
+Perfect for developers and AI enthusiasts who want to keep track of their
+Ollama models at a glance.
+```
+
+**Screenshots Required:**
+- Main tray indicator showing active models
+- Expanded menu showing running models and settings
+- Settings submenu (optional but recommended)
+
+Recommended size: 800x600 or similar aspect ratio
+
+### 3. Review Process
+
+1. **Initial Submission**: Your extension enters the review queue
+2. **Review Time**: Can take anywhere from a few days to a few weeks
+3. **Reviewers Check**:
+   - Code quality and security
+   - Functionality
+   - Compliance with GNOME guidelines
+   - No malicious code
+4. **Feedback**: Reviewers may request changes
+5. **Approval**: Once approved, your extension goes live
+
+### 4. Updating an Existing Extension
+
+When releasing updates:
+
+```bash
+# 1. Increment version in metadata.json
+# 2. Create new package
+gnome-extensions pack --force
+
+# 3. Go to extensions.gnome.org
+# 4. Navigate to your extension's page
+# 5. Click "Upload New Version"
+# 6. Upload the new .shell-extension.zip
+# 7. Add release notes describing changes
+```
+
+**Important**: Each update must have a higher version number than the previous.
+
+### 5. Release Notes Template
+
+When submitting updates, include clear release notes:
+
+```
+Version 2:
+- Added GPU percentage label next to icon
+- Implemented color-coded icon states (green/red/gray)
+- Added Settings submenu for editing Ollama URL and GPU RAM
+- Fixed API compatibility with latest Ollama versions
+- Improved error handling for network timeouts
+
+Version 1:
+- Initial release
+- Basic Ollama model monitoring
+- GPU and CPU RAM tracking
+- Configurable polling interval
+```
+
+### 6. Post-Publication
+
+After your extension is published:
+
+1. **Monitor Reviews**: Check user reviews and ratings
+2. **Respond to Issues**: Be responsive to bug reports
+3. **Regular Updates**: Keep extension compatible with new GNOME versions
+4. **Announce Updates**: If you have a project page, announce major updates
+
+### 7. Best Practices for Public Release
+
+- **Semantic Versioning**: Use meaningful version numbers
+- **Changelog**: Maintain a CHANGELOG.md file
+- **License**: Include a clear license (this project uses GPL-2.0-or-later)
+- **Documentation**: Keep README.md comprehensive and up-to-date
+- **Compatibility**: Test on all GNOME Shell versions you claim to support
+- **Settings Migration**: Handle settings changes gracefully in updates
+- **Backward Compatibility**: Try not to break existing configurations
+
+### 8. Common Rejection Reasons
+
+Extensions may be rejected for:
+
+- Security vulnerabilities
+- Executing arbitrary shell commands without proper validation
+- Including unnecessary external dependencies
+- Poor code quality or no error handling
+- Misleading description or functionality
+- Not following GNOME Human Interface Guidelines
+- Missing or broken functionality
+
+### 9. Resources
+
+- [GNOME Extensions Review Guidelines](https://gjs.guide/extensions/review-guidelines/review-guidelines.html)
+- [GNOME Shell Extension Development](https://gjs.guide/extensions/)
+- [Extensions.gnome.org](https://extensions.gnome.org)
+- [GNOME Extensions API Documentation](https://gjs-docs.gnome.org/)
+
+### 10. Quick Release Checklist
+
+```bash
+# 1. Update version in metadata.json
+# 2. Test thoroughly
+# 3. Create package
+gnome-extensions pack --force
+
+# 4. Test the package
+gnome-extensions install --force ollamatray@scipio.it.shell-extension.zip
+gnome-extensions enable ollamatray@scipio.it
+
+# 5. Take screenshots
+# 6. Upload to extensions.gnome.org
+# 7. Fill in description and details
+# 8. Submit for review
+# 9. Wait for approval
+# 10. Announce the release
+```
