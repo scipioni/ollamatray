@@ -24,7 +24,7 @@ import Clutter from 'gi://Clutter';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
-import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 const CURL_TIMEOUT = 10;
 const STATUS_INDICATORS = {
@@ -52,10 +52,10 @@ class MemoryParser {
      */
     static formatBytes(bytes) {
         if (!bytes || typeof bytes !== 'number') return '0 MB';
-        
+
         const mb = bytes / (1024 * 1024);
         const gb = mb / 1024;
-        
+
         if (gb >= 1) {
             return `${gb.toFixed(2)} GB`;
         }
@@ -104,7 +104,7 @@ const OllamaTrayIndicator = GObject.registerClass({
         }
 
         this._settings = settings;
-        
+
         // Get Ollama URL from settings
         this._ollamaUrl = this._settings.get_string('ollama-url');
 
@@ -132,7 +132,7 @@ const OllamaTrayIndicator = GObject.registerClass({
         this._allModels = [];
         this._ramUsage = '0 MB';
         this._gpuRam = this._settings.get_int('gpu-ram');
-        
+
         // Create GPU percentage label
         this._gpuLabel = new St.Label({
             text: '0%',
@@ -176,7 +176,7 @@ const OllamaTrayIndicator = GObject.registerClass({
      * @private
      */
     _createMenuSection(title, items, emptyMessage) {
-        const sectionTitle = new PopupMenu.PopupMenuItem(title, {reactive: false});
+        const sectionTitle = new PopupMenu.PopupMenuItem(title, { reactive: false });
         sectionTitle.add_style_class_name('popup-subtitle-menu-item');
         this.menu.addMenuItem(sectionTitle);
 
@@ -208,11 +208,11 @@ const OllamaTrayIndicator = GObject.registerClass({
             const isRunning = this._runningModels.some(
                 running => running.name === model.name
             );
-            
+
             const statusIndicator = isRunning ?
                 STATUS_INDICATORS.RUNNING :
                 STATUS_INDICATORS.STOPPED;
-            
+
             const sizeStr = MemoryParser.formatBytes(model.size);
             const modelItem = new PopupMenu.PopupMenuItem(
                 `${statusIndicator} ${model.name} (${sizeStr})`
@@ -239,16 +239,24 @@ const OllamaTrayIndicator = GObject.registerClass({
 
         const utilizationPercent = this._gpuRam > 0 ?
             Math.round((totalVramUsed / this._gpuRam) * 100) : 0;
-        
+
         return `GPU RAM: ${totalVramUsed.toFixed(0)} / ${this._gpuRam} MB (${utilizationPercent}%)`;
     }
 
     _createMenu() {
         this.menu.removeAll();
 
+        // GPU status
+        const statusItem = new PopupMenu.PopupMenuItem(
+            this._getGpuUtilizationText(),
+            { reactive: false }
+        );
+        statusItem.add_style_class_name('popup-subtitle-menu-item');
+        this.menu.addMenuItem(statusItem);
+
         // Running models section
         this._createMenuSection(
-            'Running Models',
+            '',
             this._createRunningModelItems(),
             'No models running'
         );
@@ -267,15 +275,6 @@ const OllamaTrayIndicator = GObject.registerClass({
         const refreshItem = new PopupMenu.PopupMenuItem('Refresh Status');
         refreshItem.connect('activate', () => this._fetchStatus());
         this.menu.addMenuItem(refreshItem);
-
-        // GPU status
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        const statusItem = new PopupMenu.PopupMenuItem(
-            this._getGpuUtilizationText(),
-            {reactive: false}
-        );
-        statusItem.add_style_class_name('popup-subtitle-menu-item');
-        this.menu.addMenuItem(statusItem);
 
         // Preferences menu item
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -324,7 +323,7 @@ const OllamaTrayIndicator = GObject.registerClass({
         );
         const gpuUtilization = this._gpuRam > 0 ?
             Math.round((totalVramUsed / this._gpuRam) * 100) : 0;
-        
+
         // Determine if GPU is being used (check if any model has VRAM allocated)
         const isUsingGpu = this._runningModels.some(model =>
             model.size_vram && model.size_vram > 0
@@ -341,7 +340,7 @@ const OllamaTrayIndicator = GObject.registerClass({
         const modelNames = this._runningModels
             .slice(0, 2)
             .map(m => m.name.split(':')[0]);
-        
+
         const modelsStr = this._runningModels.length > 2
             ? `${modelNames.join(', ')}+${this._runningModels.length - 2}`
             : modelNames.join(', ');
@@ -382,12 +381,12 @@ const OllamaTrayIndicator = GObject.registerClass({
      */
     _updateIconColor(isUsingGpu, hasRunningModels) {
         if (!this._icon) return;
-        
+
         // Remove any existing color styles
         this._icon.remove_style_class_name('ollama-gpu-active');
         this._icon.remove_style_class_name('ollama-cpu-active');
         this._icon.remove_style_class_name('ollama-inactive');
-        
+
         if (!hasRunningModels) {
             // Gray when no models running
             this._icon.add_style_class_name('ollama-inactive');
@@ -425,7 +424,7 @@ const OllamaTrayIndicator = GObject.registerClass({
             `Ollama - ${this._runningModels.length} running, ${this._allModels.length} total\n` +
             `Mode: ${usageType}\n` +
             `GPU: ${totalVramUsed.toFixed(0)} / ${this._gpuRam} MB (${gpuUtilization}%)`;
-        
+
         // Set tooltip_text property on the button
         this.set_tooltip_text?.(tooltipText);
 
@@ -483,7 +482,7 @@ const OllamaTrayIndicator = GObject.registerClass({
                 const [res, out, err, status] = GLib.spawn_command_line_sync(
                     `curl -s -m ${CURL_TIMEOUT} ${url}`
                 );
-                
+
                 if (status === 0) {
                     try {
                         // Convert GLib.Bytes to string using TextDecoder (modern approach)
