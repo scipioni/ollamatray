@@ -1,0 +1,27 @@
+{
+  "name": "ollama-tray",
+  "version": "1.0.0",
+  "description": "System tray indicator for monitoring Ollama models",
+  "type": "module",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scipio/ollamatray.git"
+  },
+  "author": "Scipio <scipio@domain.invalid>",
+  "license": "GPL-2.0-or-later",
+  "bugs": {
+    "url": "https://github.com/scipio/ollamatray/issues"
+  },
+  "homepage": "https://github.com/scipio/ollamatray#readme",
+  "sideEffects": false,
+  "scripts": {
+    "build": "echo 'Building extension...'",
+    "dev": "echo 'Development mode...'"
+  },
+  "devDependencies": {
+    "@girs/gjs": "^4.0.0-beta.38",
+    "@girs/gnome-shell": "^49.1.0",
+    "typescript": "^5.0.0"
+  }
+}
